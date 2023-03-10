@@ -1,0 +1,62 @@
+version: '3'
+
+services:
+  # minimum two nodes
+  elas-01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: elas-01
+    environment:
+      - node.name=elas-01
+      - cluster.name=elas-cluster
+      - discovery.seed_hosts=elas-02
+      - cluster.initial_master_nodes=elas-01,elas-02
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elas-01-vol:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+
+  elas-02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: elas-02
+    environment:
+      - node.name=elas-02
+      - cluster.name=elas-cluster
+      - discovery.seed_hosts=elas-01
+      - cluster.initial_master_nodes=elas-01,elas-02
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elas-02-vol:/usr/share/elasticsearch/data
+    ports:
+      - 9201:9201
+
+# required for the ELK elastic stack
+  elaskiba01:
+    image: docker.elastic.co/kibana/kibana:7.10.2
+    container_name:  elaskiba01
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://elas-01:9200
+      ELASTICSEARCH_HOSTS: http://elas-01:9200
+    depends_on:
+      - elas-01
+      - elas-02
+
+# volumes and networks to be created externally
+# with docker volume create... docker network create...
+volumes:
+  elas-01-vol:
+    external: true
+  elas-02-vol:
+    external: true
